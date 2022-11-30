@@ -2,26 +2,26 @@ const express = require('express')
 const app = express()
 const cors = require('cors')
 const port = process.env.PORT || 5000;
-const jwt = require('jsonwebtoken');
 
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 require('dotenv').config()
 
+// new change 
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
-//middleare
+const jwt = require('jsonwebtoken');
+
+
 app.use(cors())
 app.use(express.json())
 
 app.get('/', (req, res) => {
-    res.send('Hello from resell laptop store!')
+    res.send('Hello from laptop resel!')
 })
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.6vjtu3h.mongodb.net/?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
-
-
-
 
 function verifyJWT(req, res, next) {
     const authHeader = req.headers.authorization;
@@ -48,7 +48,6 @@ async function run() {
         const usersCollection = client.db('resell').collection('users')
 
         const productsCollection = client.db('resell').collection('products')
-
         const ordersCollection = client.db('resell').collection('orders')
 
 
@@ -99,6 +98,16 @@ async function run() {
             // console.log(result)
 
             res.send(result)
+        })
+
+
+        //client advertised
+        app.get('/advertised', async (req, res) => {
+            // const Advertised = req.params.Advertised;
+            console.log({ roleModel: "Advertised" })
+            const query = { roleModel: "Advertised" }
+            const product = await productsCollection.find(query).toArray();
+            res.send(product)
         })
 
         // app.get('/products/:id', async(req, res) =>{
@@ -163,28 +172,8 @@ async function run() {
         })
 
 
-        // advertise field add 
-        // app.put('/addAdvertise', async (req, res) => {
-        //     const filter = {}
-        //     const options = { upsert: true }
-        //     const updatedDoc = {
-        //         $set: {
-        //             Advertised: 'Ad'
-        //         }
-        //     }
-        //     const result = await productsCollection.updateMany(filter, updatedDoc, options)
 
-        //     res.send(result)
-        // })
 
-        //client advertised
-        app.get('/advertised', async (req, res) => {
-            // const Advertised = req.params.Advertised;
-            console.log({ roleModel: "Advertised" })
-            const query = { roleModel: "Advertised" }
-            const product = await productsCollection.find(query).toArray();
-            res.send(product)
-        })
 
         // orders post
         app.post('/orders', async (req, res) => {
@@ -260,17 +249,30 @@ async function run() {
         })
 
 
-        // make admin 
+        // advertise field add 
+        // app.put('/addAdvertise', async(req, res) =>{
+        //     const filter = {}
+        //     const options = { upsert: true }
+        //     const updatedDoc = {
+        //         $set: {
+        //             Advertised: 'Ad'
+        //         }
+        //     }
+        //     const result = await productsCollection.updateMany(filter, updatedDoc, options)
+
+        //     res.send(result)
+        // })
+
+        // make admin chages
         app.put('/users/admin/:id', verifyJWT, async (req, res) => {
             const decodedEmail = req.decoded.email;
-
             const query = { email: decodedEmail }
+            console.log(query)
             const user = await usersCollection.findOne(query)
 
-            if (user.role !== 'Adimn') {
-                return res.status(403).send({ message: 'Forbidden access' })
+            if (user?.role !== 'Admin') {
+                return res.status(403).send({ message: 'forbiden access' })
             }
-
 
             const id = req.params.id;
             const filter = { _id: ObjectId(id) }
@@ -281,10 +283,9 @@ async function run() {
                 }
             }
             const result = await usersCollection.updateOne(filter, updatedDoc, options)
-
             res.send(result)
         })
-        //delete
+
 
         app.delete('/users/:id', async (req, res) => {
             const id = req.params.id;
@@ -292,16 +293,13 @@ async function run() {
             const result = await usersCollection.deleteOne(filter)
             res.send(result)
         })
-
-
-        //delete
-
         app.delete('/orders/:id', async (req, res) => {
             const id = req.params.id;
             const filter = { _id: ObjectId(id) }
             const result = await ordersCollection.deleteOne(filter)
             res.send(result)
         })
+
 
 
 
@@ -316,6 +314,9 @@ async function run() {
 }
 
 run().catch(console.log)
+
+
+
 
 
 
